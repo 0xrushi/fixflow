@@ -1,12 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from typing import Dict
 from pydantic import BaseModel
+from filesearch import llm_file_search
 import asyncio
 import os
 
 app = FastAPI()
 
-# Import the VSCodeControlAgent
 class VSCodeCommandRequest(BaseModel):
     command: str
 
@@ -21,7 +21,7 @@ if "OPENAI_API_KEY" in os.environ:
     from pydantic import BaseModel, Field
     import httpx
     import os
-
+    
     class VSCodeControlTool(BaseTool):
         name: str
         description: str
@@ -38,6 +38,26 @@ if "OPENAI_API_KEY" in os.environ:
             """Execute the VS Code control command asynchronously."""
             async with httpx.AsyncClient() as client:
                 try:
+                    # If this is the open_file command, process the path first
+                    if self.name == "open_file" and "path" in kwargs:
+                        # Get the workspace directory - you'll need to set this
+                        workspace_dir = os.getenv("WORKSPACE_DIR", "/Users/bread/Documents/vscodeproj/api-server")
+                        
+                        # Use llm_file_search to find the closest matching file
+                        search_result = llm_file_search(
+                            directory=workspace_dir,
+                            search_term=kwargs["path"],
+                            api_key=os.getenv("OPENAI_API_KEY")
+                        )
+                        
+                        if "error" in search_result:
+                            return {"status": "error", "message": f"File search error: {search_result['error']}"}
+                        
+                        if search_result.get("full_path"):
+                            # Update the path parameter with the full correct path
+                            kwargs["path"] = search_result["full_path"]
+                        else:
+                            return {"status": "error", "message": "No matching file found"}
                     params = {k: kwargs[k] for k in self.params if k in kwargs}
                     response = await client.get(f"{self.base_url}/{self.endpoint}", params=params)
                     response.raise_for_status()
@@ -52,7 +72,7 @@ if "OPENAI_API_KEY" in os.environ:
             """Initialize the VS Code Control Agent."""
             self.llm = ChatOpenAI(
                 api_key=openai_api_key,
-                model="gpt-3.5-turbo-0125"
+                model="gpt-4o"
             )
             
             # Define all VS Code control tools
@@ -84,7 +104,7 @@ if "OPENAI_API_KEY" in os.environ:
                 ),
                 VSCodeControlTool(
                     name="open_file",
-                    description="Open a specific file in VS Code by providing its path",
+                    description="Open a specific file. Required parameter: 'path' - the name or path of the file to open. The tool will automatically search for similar filenames if exact match not found.",
                     endpoint="openFile",
                     params=["path"]
                 ),
@@ -117,13 +137,44 @@ if "OPENAI_API_KEY" in os.environ:
                 )
             ]
 
-            # Create the prompt template
+            # Create the prompt template with improved instructions
             self.prompt = ChatPromptTemplate.from_messages([
                 (
                     "system",
                     """You are a VS Code control assistant that helps users manage their editor tabs and navigation.
-                    Use the available tools to help users control VS Code through natural language commands.
-                    Always check the status first before executing other commands to ensure the extension is running."""
+                    You have access to several tools to control VS Code through natural language commands.
+                    
+                    Important guidelines:
+                    1. Always check the status first before executing other commands to ensure the extension is running.
+                    
+                    2. When opening files:
+                       - You MUST use the 'path' parameter with the open_file tool
+                       - Example: If user says "open the config file", use open_file(path="config")
+                       - The path can be a partial filename, relative path, or description
+                       - The tool includes automatic file search functionality that will:
+                         * Search for files matching the provided name or description
+                         * Find similar filenames if exact match isn't found
+                         * Search through the entire workspace recursively
+                       - If initial open fails, don't give up - the search will try to find similar files
+                       - Example handling:
+                         * "open the main JavaScript file" -> open_file(path="main.js")
+                         * "open the user config" -> open_file(path="user config")
+                         * "open the API routes" -> open_file(path="api routes")
+                    
+                    3. When switching tabs:
+                       - Use the 'name' parameter with go_to_tab
+                       - Example: go_to_tab(name="index.js")
+                    
+                    4. When going to a specific line:
+                       - Use the 'line' parameter with go_to_line
+                       - Example: go_to_line(line="42")
+                    
+                    5. For better results:
+                       - First list_open_tabs or get_recent_files if the user's request is ambiguous
+                       - If file not found, try alternative search terms based on the user's description
+                       - Consider file extensions when searching (.js, .py, .json, etc.)
+                    
+                    Always provide the required parameters for tools that need them. Never skip parameters that are marked as required in the tool descriptions. If a file isn't found immediately, the built-in search will help find the closest match."""
                 ),
                 ("human", "{input}"),
                 ("placeholder", "{agent_scratchpad}")
