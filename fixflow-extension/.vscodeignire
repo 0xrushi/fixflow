@@ -1,0 +1,9 @@
+.vscode/**          # VS Code workspace settings
+.vscode-test/**     # Extension test files
+src/**             # Source TypeScript files (since you distribute compiled JS)
+.gitignore         # Git configuration
+**/tsconfig.json   # TypeScript configuration
+**/.eslintrc.json  # ESLint configuration
+**/*.map          # Source maps
+**/*.ts           # TypeScript source files
+node_modules/**    # Dependencies (will be installed by npm)
