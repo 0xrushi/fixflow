@@ -4,6 +4,7 @@ import httpx
 import uvicorn
 from typing import Optional, List, Dict, Union
 from pydantic import BaseModel
+from win import get_vscode_windows, switch_to_window
 
 app = FastAPI(title="VS Code Tab Control API")
 
@@ -48,6 +49,14 @@ class TabListResponse(BaseModel):
     status: str
     command: str
     tabs: List[TabInfo]
+    
+
+class WindowInfo(BaseModel):
+    name: str
+
+class WindowListResponse(BaseModel):
+    status: str
+    windows: List[str]
 
 
 async def forward_to_vscode(command: str, params: Dict = None) -> dict:
@@ -147,9 +156,30 @@ async def check_status():
         return {"status": "disconnected", "message": "VS Code extension is not running"}
 
 
+@app.get("/listWindows", response_model=WindowListResponse)
+async def list_windows():
+    """Get a list of all open VSCode windows."""
+    windows = get_vscode_windows()
+    return {"status": "success", "windows": windows}
+
+@app.get("/switchWindow", response_model=CommandResponse)
+async def switch_window(title: str):
+    """Switch to a specific VSCode window by its title."""
+    if not title:
+        raise HTTPException(status_code=400, detail="Window title must be provided")
+    
+    success = switch_to_window(title)
+    if success:
+        return {"status": "success", "command": "switchWindow", "message": f"Switched to window: {title}"}
+    else:
+        raise HTTPException(status_code=404, detail=f"Window '{title}' not found or failed to switch")
+
+
 if __name__ == "__main__":
     print("Starting VS Code Control API...")
     print("\nAvailable endpoints:")
+    print("- GET /listWindows")
+    print("- GET /switchWindow?name=<window_title>")
     print("- GET /nextTab")
     print("- GET /previousTab")
     print("- GET /closeTab")
