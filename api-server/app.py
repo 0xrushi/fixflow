@@ -5,6 +5,8 @@ import uvicorn
 from typing import Optional, List, Dict, Union
 from pydantic import BaseModel
 from win import get_vscode_windows, switch_to_window
+from dotenv import load_dotenv
+load_dotenv()
 
 app = FastAPI(title="VS Code Tab Control API")
 
