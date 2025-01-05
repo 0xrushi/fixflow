@@ -42,6 +42,7 @@ uvicorn shortcuts:app --reload --host 127.0.0.1 --port 8000
 This command will start the server in development mode with hot reloading, listening on localhost port 8000.
 
 Add the below flow in the shortcuts app:
+<img width="1112" alt="Screenshot 2025-01-05 at 10 12 30 AM" src="https://github.com/user-attachments/assets/2d4bdd5b-b461-496f-b057-3a2c5eeddb5d" />
 
 
 Open VSCode, install the `fixflow/fixflow-extension/fixflow-0.0.1.vsix` vscode extension to communicate with the above api.
