@@ -4,6 +4,9 @@
         {
             "name": "Extension",
             "type": "extensionHost",
+            "env": {
+                "VSCODE_DEBUG_LOG": "*"
+            },
             "request": "launch",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}"

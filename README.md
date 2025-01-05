@@ -32,8 +32,6 @@ OPENAI_API_KEY=YOUR_OPENAI_API_KEY
 
 ## Running the application
 
-**Terminal 1:**
-
 Start the uvicorn server to run the Fixflow API server from the `api-server` directory:
 
 ```bash
@@ -43,19 +41,7 @@ uvicorn shortcuts:app --reload --host 127.0.0.1 --port 8000
 
 This command will start the server in development mode with hot reloading, listening on localhost port 8000.
 
-**Terminal 2:**
+Add the below flow in the shortcuts app:
 
-In a separate terminal window, navigate to the `api-server` directory again:
 
-```bash
-source venv/bin/activate
-cd fixflow/api-server
-```
-
-Run the application using the following command:
-
-```bash
-python app.py
-```
-
-Open VSCode, install the `fixflow/fixflow-extension/fixflow-0.0.1.vsix` vscode extension to communicate with the above 2 servers.
+Open VSCode, install the `fixflow/fixflow-extension/fixflow-0.0.1.vsix` vscode extension to communicate with the above api.

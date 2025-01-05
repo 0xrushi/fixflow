@@ -5,12 +5,32 @@ from filesearch import llm_file_search
 import asyncio
 import os
 from dotenv import load_dotenv
+from fastapi.responses import JSONResponse
 load_dotenv()
 
 app = FastAPI()
 
-class VSCodeCommandRequest(BaseModel):
-    command: str
+VSCODE_SERVER = "http://localhost:3068"
+async def forward_to_vscode(command: str, params: Dict = None) -> dict:
+    """Forward command to VS Code extension server."""
+    async with httpx.AsyncClient() as client:
+        try:
+            url = f"{VSCODE_SERVER}/{command}"
+            response = await client.get(url, params=params)
+            data = response.json()
+
+            # If the response indicates an error, ensure it includes the command
+            if data.get("status") == "error":
+                data["command"] = command
+
+            return JSONResponse(data)
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="VS Code extension not running. Please start the extension in VS Code first (press F5 in the extension project)",
+            )
+
+
 
 # Initialize the agent with the OpenAI API key
 agent = None
@@ -58,9 +78,10 @@ if "OPENAI_API_KEY" in os.environ:
                         else:
                             return {"status": "error", "message": "No matching file found"}
                     params = {k: kwargs[k] for k in self.params if k in kwargs}
-                    response = await client.get(f"{self.base_url}/{self.endpoint}", params=params)
-                    response.raise_for_status()
-                    return response.json()
+                    if self.endpoint != "status":
+                        response = await forward_to_vscode(self.endpoint, params=params)
+                        return response
+                    return {}
                 except httpx.HTTPError as e:
                     return {"status": "error", "message": f"HTTP error occurred: {str(e)}"}
                 except Exception as e:
@@ -217,6 +238,8 @@ if "OPENAI_API_KEY" in os.environ:
 
     agent = VSCodeControlAgent(openai_api_key=os.getenv("OPENAI_API_KEY"))
 
+class VSCodeCommandRequest(BaseModel):
+    command: str
 @app.post("/execute")
 async def execute_command(request: VSCodeCommandRequest) -> Dict:
     if not agent:
