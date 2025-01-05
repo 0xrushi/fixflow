@@ -1,5 +1,7 @@
 # Fixflow
 
+Fixflow is an AI tool that enhances your VSCode workflow by integrating with macOS Shortcuts for a clutter-free development experience 
+
 ## Demo
 <a href="https://odysee.com/@rushi:2/fixflow-demo:0" target="_blank">
   <img src="https://s3.amazonaws.com/cdn.freshdesk.com/data/helpdesk/attachments/production/1079857321/original/5hs--T2zBkdydDD16hRXpMFA5ZIpZ2Zpyg.png?1562585254" alt="Video Thumbnail"> 
